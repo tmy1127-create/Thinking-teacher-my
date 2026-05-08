@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小壁虎老師即時互動牆 - 教師端</title>
+    <style>
+        body { font-family: sans-serif; background-color: #fcfcfc; margin: 0; padding: 20px; display: flex; flex-direction: column; min-height: 100vh; box-sizing: border-box; }
+        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        h1 { margin: 0; color: #333; font-size: clamp(24px, 4vw, 32px); } 
+        .btn-group { display: flex; gap: 10px; }
+        .btn { border: none; padding: 10px 18px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .fullscreen-btn { background: #f0f0f0; color: #333; }
+        .clear-btn { background: #fff3e0; color: #e65100; border: 1px solid #ffe0b2; }
+        #message-board { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; flex-grow: 1; align-content: flex-start; }
+        .bubble { background: #f0f7ff; border-left: 6px solid #2196F3; padding: 15px 20px; border-radius: 12px; box-shadow: 0 3px 8px rgba(0,0,0,0.08); min-width: 200px; max-width: 350px; max-height: 150px; overflow-y: auto; font-size: 20px; color: #333; word-wrap: break-word; animation: popIn 0.3s ease-out; }
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
+        .footer { margin-top: 40px; padding-bottom: 10px; font-size: 14px; color: #888; text-align: center; width: 100%; }
+    </style>
+</head>
+<body>
+
+    <div class="header-bar">
+        <h1>💡 大家的想法 (即時更新)</h1>
+        <div class="btn-group">
+            <button class="btn clear-btn" onclick="virtualClear()">✨ 開始新場次 (清空畫面)</button>
+            <button class="btn fullscreen-btn" onclick="toggleFullScreen()">⛶ 全螢幕</button>
+        </div>
+    </div>
+    
+    <div id="message-board">正在連線至雲端...</div>
+
+    <div class="footer">
+        © 2026 小壁虎老師. All Rights Reserved.
+    </div>
+
+<script>
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbyMQQx3nrbTwnPqvvrRioLnL4z8A6B6DSjbbpaqsh9kIdE98yUti3IUd6MmgZSj8H9t/exec';
+    
+    // 預設為 0，代表一開啟網頁就顯示試算表所有內容
+    let displayAfterTime = 0;
+    let previousDataLength = 0;
+
+    function fetchMessages() {
+        fetch(scriptURL)
+        .then(res => res.json())
+        .then(data => {
+            const board = document.getElementById('message-board');
+            
+            // 過濾：只顯示「時間晚於 displayAfterTime」的留言
+            const filteredData = data.filter(row => {
+                const msgTime = new Date(row[0]).getTime();
+                return msgTime > displayAfterTime;
+            });
+
+            if (filteredData.length === 0) {
+                board.innerHTML = '<p style="color:#aaa; font-size: 20px;">目前沒有新想法喔！</p>';
+                previousDataLength = 0;
+                return;
+            }
+
+            if (filteredData.length === previousDataLength) return; 
+            previousDataLength = filteredData.length;
+
+            board.innerHTML = '';
+            filteredData.reverse().forEach(row => {
+                if(row[1]) {
+                    const bubble = document.createElement('div');
+                    bubble.className = 'bubble';
+                    bubble.innerText = row[1]; 
+                    board.appendChild(bubble);
+                }
+            });
+        });
+    }
+
+    function virtualClear() {
+        const check = confirm("【截圖提醒】\n需要先截圖保留目前的討論畫面嗎？\n\n點擊確定後，畫面將會清空並開始收集新想法。\n(所有紀錄仍會安全保存在 Google 試算表中)");
+        
+        if (check) {
+            // 將過濾時間點設定為「現在」，舊留言會被自動隱藏
+            displayAfterTime = new Date().getTime();
+            document.getElementById('message-board').innerHTML = '';
+            previousDataLength = 0;
+        }
+    }
+
+    function toggleFullScreen() {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else if (document.exitFullscreen) document.exitFullscreen();
+    }
+
+    setInterval(fetchMessages, 3000);
+    fetchMessages();
+</script>
+
+</body>
+</html>
